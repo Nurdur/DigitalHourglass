@@ -38,13 +38,15 @@ int ledState[] = {LOW,LOW,LOW,LOW,LOW};  // the current state of the output pin
 int buttonState;             // the current reading from the input pin
 int lastButtonState = LOW;   // the previous reading from the input pin
 int lastLED = 0;
-boolean flashed = false;
+boolean flashing = false;    // Once time runs out, flash all 5 led's
 
 // the following variables are unsigned longs because the time, measured in
 // milliseconds, will quickly become a bigger number than can be stored in an int.
 unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
 unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
-unsigned long ledDelay = 300000;     // 5 minutes per LED / button press
+unsigned long ledDelay = 30000;      // 5 minutes per LED / button press
+unsigned long flasher;               // timer for LED flash on/off
+unsigned long flash_time = 600;      // flash speed
 
 void setup() {
   pinMode(buttonPin, INPUT);
@@ -67,8 +69,7 @@ void loop() {
 
   // If the switch changed, due to noise or pressing:
   if (reading != lastButtonState) {
-    // reset the debouncing timer
-    lastDebounceTime = millis();
+    lastDebounceTime = millis();    // reset the debouncing timer
   }
 
   if ((millis() - lastDebounceTime) > debounceDelay) {
@@ -83,7 +84,7 @@ void loop() {
       if (buttonState == HIGH) {
         if (ledState[lastLED] == LOW) {       // If the "current" LED is off:
           ledState[lastLED] = HIGH;           //  Light it
-          flashed = false;                    //  and make sure they'll all flash when time runs out again
+          flashing = false;                   //  Make sure the LEDs are not flashing
           if (lastLED < 5) {                  // If we just lit LED 5, there is no 6th, so don't increment
             lastLED++;       
           }
@@ -96,18 +97,9 @@ void loop() {
           lastLED--;                                      //  Fix the 'pointer'
           ledState[lastLED] = LOW;                        //  And unlight that highest lit LED
         }
-        if ((lastLED == 0) && (!flashed)) {               // if we just unlit the final LED
-          for(int j=0;j<5;j++) {                          // flash all 5 LEDs 5 times
-            for (int i=0;i<5;i++) {
-              digitalWrite(leds[i], HIGH);
-            }
-            delay(300);
-            for (int i=0;i<5;i++) {
-              digitalWrite(leds[i], LOW);
-            }
-            delay(300);
-          }
-          flashed = true;                                 // And only do that once, unless we add more time again
+        if (lastLED == 0) {                               // if no LEDs are lit
+          flashing = true;                                // flash all 5 LEDs
+          flasher = millis();
         }
       lastDebounceTime = millis();                        // reset the timer  
       }
@@ -118,6 +110,12 @@ void loop() {
   //   which seems like a lot of extra work for nothing. Inherited from example. Might fix sometime, however-
   //   keeping track of states using ledState[] lets us do logic/tests of the state. Otherwise, we'd have to\
   //   query the output pin itself. Might be possible, don't know.
+    if((flashing) && (millis() - flasher) > flash_time) {
+      for(int i=0;i<5;i++) {
+        ledState[i]= ledState[i] ? LOW : HIGH;
+      }
+      flasher = millis();
+    }
     for(int i=0;i<5;i++) {
       digitalWrite(leds[i], ledState[i]);
     }
