@@ -1,61 +1,55 @@
 /*
-  Debounced Digital LED Hourglass -- Now in GIT for practice
+  Debounced Digital LED Hourglass 
 
   Each time the input pin goes from LOW to HIGH (e.g. because of a push-button
   press), the next LED is lit. There's a minimum delay between toggles to 
   debounce the circuit (i.e. to ignore noise). As time elapses (ledDelay) the 
   LEDs are unlit in reverse. When LED 0 is unlit, all 5 LED's flash on and off 
-  5 times. More time can be added at any time by pressing the button, lighting
-  the next higher LED.
+  continuously. More time can be added at any time by pressing the button.
 
   The circuit:
   - LEDs attached from pins 7,6,5,4,3 to ground through 220 ohm resistors
   - pushbutton attached from pin 2 to +5V
-  - 10 kilohm resistor attached from pin 2 to ground
+  - 10 kilohm pulldown resistor attached from pin 2 to ground
 
-  created 21 Nov 2006
-  by David A. Mellis
-  modified 30 Aug 2011
-  by Limor Fried
-  modified 28 Dec 2012
-  by Mike Walters
-  modified 30 Aug 2016
-  by Arturo Guadalupi
-  modified 22 Sep 2017
-  by Milan Keser
+  created  21 Nov 2006 by David A. Mellis
+  modified 30 Aug 2011 by Limor Fried
+  modified 28 Dec 2012 by Mike Walters
+  modified 30 Aug 2016 by Arturo Guadalupi
+  modified 22 Sep 2017 by Milan Keser
 
   This program was based on example code in the public domain.
 
   http://www.arduino.cc/en/Tutorial/Debounce
+
+  TODO: Remove ledState. Try using DigitalRead[led[i]] instead. 
+
 */
 
 // constants won't change. They're used here to set pin numbers:
-const int buttonPin = 2;           // the number of the pushbutton pin
-const int leds[] = {3, 4, 5, 6, 7};  // the number of the LED pin
+const int buttonPin = 2;                 // the number of the pushbutton pin
+const int leds[] = {3, 4, 5, 6, 7};      // the number of the LED pin
 
 // Variables will change:
-int ledState[] = {LOW,LOW,LOW,LOW,LOW};  // the current state of the output pin
-int buttonState;             // the current reading from the input pin
-int lastButtonState = LOW;   // the previous reading from the input pin
+int buttonState;                         // the current reading from the input pin
+int lastButtonState = LOW;               // the previous reading from the input pin
 int lastLED = 0;
-boolean flashing = false;    // Once time runs out, flash all 5 led's
+boolean flashing = false;                // Once time runs out, flash all 5 led's
 
-// the following variables are unsigned longs because the time, measured in
-// milliseconds, will quickly become a bigger number than can be stored in an int.
-unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
-unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
-unsigned long ledDelay = 300000;      // 5 minutes per LED / button press
-unsigned long flasher;               // timer for LED flash on/off
-unsigned long flash_time = 600;      // flash speed
+// Time, measured in milliseconds, will quickly become too big to be stored in an int.
+unsigned long lastDebounceTime = 0;      // the last time the output pin was toggled
+unsigned long debounceDelay = 50;        // the debounce delay; increase if the output flickers
+unsigned long ledDelay = 300000;         // 300k ms = 5 minutes per LED / button press
+unsigned long flasher;                   // timestamp for LED flash on/off
+unsigned long flash_time = 800;          // flash speed (on/off time)
 
 void setup() {
-  pinMode(buttonPin, INPUT);
+  pinMode(buttonPin, INPUT);             // Set pin I/O modes
   for(int i=0;i<5;i++) {
     pinMode(leds[i], OUTPUT);
   }
-  // set initial LED state
-  for(int i=0;i<5;i++) {
-    digitalWrite(leds[i], ledState[i]);
+  for(int i=0;i<5;i++) {                 // Turn off all LEDs
+    digitalWrite(leds[i], LOW);          // (should already be off, but just in case)
   }
 }
 
@@ -63,62 +57,48 @@ void loop() {
   // read the state of the switch into a local variable:
   int reading = digitalRead(buttonPin);
 
-  // check to see if you just pressed the button
-  // (i.e. the input went from LOW to HIGH), and you've waited long enough
-  // since the last press to ignore any noise:
-
-  // If the switch changed, due to noise or pressing:
+  // If the switch has changed state, due to noise or user input:
   if (reading != lastButtonState) {
     lastDebounceTime = millis();    // reset the debouncing timer
   }
 
   if ((millis() - lastDebounceTime) > debounceDelay) {
-    // whatever the reading is at, it's been there for longer than the debounce
-    // delay, so take it as the actual current state:
-
-    // if the button state has changed:
-    if (reading != buttonState) {
-      buttonState = reading;
-
-      // only toggle the LED if the new button state is HIGH
-      if (buttonState == HIGH) {
-        if (ledState[lastLED] == LOW) {       // If the "current" LED is off:
-          ledState[lastLED] = HIGH;           //  Light it
-          flashing = false;                   //  Make sure the LEDs are not flashing
-          if (lastLED < 5) {                  // If we just lit LED 5, there is no 6th, so don't increment
-            lastLED++;       
+    // If the reading has been there for longer than the debounce delay, take it as the current state
+    if (reading != buttonState) {           // If the button state has changed
+      buttonState = reading;                // Remember the new state
+      if (buttonState == HIGH) {            // If the new button state is HIGH (pressed)  
+        digitalWrite(leds[lastLED], HIGH);  // Light lastLED. Lower LEDs should already be lit
+        flashing = false;                   // Make sure the LEDs are not flashing
+        if (lastLED < 5) {                            
+          lastLED++;                        // Increment lastLED unless at 5 already
+          for(int i=lastLED;i<5;i++) {      // Unlight any higher LEDs (in case they were flashed on)
+            digitalWrite(leds[i], LOW);
           }
         }
       }
     }
     else {                                                // if the button state has not changed
-      if ((millis() - lastDebounceTime) > ledDelay) {     // for longer than the preset LED delay time
-        if (lastLED > 0) {                                // And if something is lit
-          lastLED--;                                      //  Fix the 'pointer'
-          ledState[lastLED] = LOW;                        //  And unlight that highest lit LED
+      if (((millis() - lastDebounceTime) > ledDelay) && !flashing) {  // And we're not currently flashing   
+        if (lastLED > 0) {                                // If something is lit
+          lastLED--;                                      //  Decrement the 'pointer'
+          digitalWrite(leds[lastLED], LOW);               //  And unlight that highest lit LED
         }
         if (lastLED == 0) {                               // if no LEDs are lit
-          flashing = true;                                // flash all 5 LEDs
-          flasher = millis();
+          flashing = true;                                // flash the LEDs
+          flasher = millis();                             // And remember when the current flash began
         }
-      lastDebounceTime = millis();                        // reset the timer  
+        lastDebounceTime = millis();                      // reset the debounce timer  
       }
     }
   }
 
-  // light/unlight the LEDs: (MK: I could just move the writes up into the loop. This refreshes them every pass,
-  //   which seems like a lot of extra work for nothing. Inherited from example. Might fix sometime, however-
-  //   keeping track of states using ledState[] lets us do logic/tests of the state. Otherwise, we'd have to\
-  //   query the output pin itself. Might be possible, don't know.
-    if((flashing) && (millis() - flasher) > flash_time) {
-      for(int i=0;i<5;i++) {
-        ledState[i]= ledState[i] ? LOW : HIGH;
-      }
-      flasher = millis();
+  // Light / Unlight the LEDs by setting the pin states
+  if((flashing) && (millis() - flasher) > flash_time) { // When the current on or off flash time is up
+    for(int i=0;i<5;i++) {                              // Toggle the LED states on->off or off->on
+      digitalWrite(leds[i],digitalRead(leds[i]) ? LOW : HIGH);
     }
-    for(int i=0;i<5;i++) {
-      digitalWrite(leds[i], ledState[i]);
-    }
+    flasher = millis();                                 // Reset the current on/off timer
+  }
   // save the reading. Next time through the loop, it'll be the lastButtonState:
   lastButtonState = reading;
 }
