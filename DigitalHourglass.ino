@@ -44,7 +44,7 @@ boolean flashing = false;    // Once time runs out, flash all 5 led's
 // milliseconds, will quickly become a bigger number than can be stored in an int.
 unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
 unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
-unsigned long ledDelay = 30000;      // 5 minutes per LED / button press
+unsigned long ledDelay = 300000;      // 5 minutes per LED / button press
 unsigned long flasher;               // timer for LED flash on/off
 unsigned long flash_time = 600;      // flash speed
 
