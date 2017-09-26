@@ -1,5 +1,5 @@
 /*
-  Debounced Digital LED Hourglass
+  Debounced Digital LED Hourglass -- Now in GIT for practice
 
   Each time the input pin goes from LOW to HIGH (e.g. because of a push-button
   press), the next LED is lit. There's a minimum delay between toggles to 
