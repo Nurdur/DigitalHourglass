@@ -19,10 +19,7 @@
   modified 22 Sep 2017 by Milan Keser
 
   This program was based on example code in the public domain.
-
   http://www.arduino.cc/en/Tutorial/Debounce
-
-  TODO: Remove ledState. Try using DigitalRead[led[i]] instead. 
 
 */
 
@@ -33,14 +30,14 @@ const int leds[] = {3, 4, 5, 6, 7};      // the number of the LED pin
 // Variables will change:
 int buttonState;                         // the current reading from the input pin
 int lastButtonState = LOW;               // the previous reading from the input pin
-int lastLED = 0;
+int lastLED = 0;                         // Points at which LED to light next
 boolean flashing = false;                // Once time runs out, flash all 5 led's
 
 // Time, measured in milliseconds, will quickly become too big to be stored in an int.
 unsigned long lastDebounceTime = 0;      // the last time the output pin was toggled
 unsigned long debounceDelay = 50;        // the debounce delay; increase if the output flickers
 unsigned long ledDelay = 300000;         // 300k ms = 5 minutes per LED / button press
-unsigned long flasher;                   // timestamp for LED flash on/off
+unsigned long flasher = 0;               // timestamp for LED flash on/off
 unsigned long flash_time = 800;          // flash speed (on/off time)
 
 void setup() {
